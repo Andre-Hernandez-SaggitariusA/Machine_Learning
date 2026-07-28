@@ -32,10 +32,10 @@ def der_leaky_relu(x, alpha=0.01):
 
 def softmax(x):
 
-	x = x - np.max(x)
+	x = x - np.max(x, axis=0, keepdims=True)
 	
 	exponente = np.exp(x)
 	
-	probabilidad = exponente / np.sum(exponente)
+	probabilidad = exponente / np.sum(exponente, axis=0, keepdims=True)
 	
 	return probabilidad
