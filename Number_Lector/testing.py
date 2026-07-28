@@ -16,20 +16,11 @@ df = pd.read_csv(ruta)
 
 valores = df["label"].to_numpy()
 
-if ruta == "testing/test_1.csv":
+imagenes = df.drop(columns = "label").to_numpy(dtype=np.float64)
 
-	imagenes = df.drop(columns = "label").to_numpy() / 255
-	
-else:
+if imagenes.max() > 1:
 
-	imagenes = df.drop(columns = "label").to_numpy()
-	
-def obtener_imagen(num_fila):
-	
-	imagen = imagenes[num_fila]
-	valor = valores[num_fila]
-	
-	return imagen, valor
+	imagenes /= 255
 
 # Pesos y bias guardados
 
@@ -52,31 +43,45 @@ correcto = []
 
 num_im = len(imagenes)
 
-for j in range(num_im):
+# Definir Mini_Batch
 
+batch_size = 32
+
+# Indices
+
+indices = rng.permutation(num_im)
+
+for i in range(0, num_im, batch_size):
+
+	indices_batch = indices[i:i + batch_size]
+	
 	# Obtener matriz
-		
-	imagen, valor = obtener_imagen(j)
+	
+	imagenes_batch = imagenes[indices_batch].T
+	valores_batch = valores[indices_batch]
+	
+	# Forward Propagation
 	
 	# Primera capa
 	
-	primera_capa = krn.forward_leaky_relu(W1, b1, imagen)
+	A1 = krn.forward_leaky_relu(W1, b1, imagenes_batch)
 
 	# Segunda capa	
 	
-	segunda_capa = krn.forward_leaky_relu(W2, b2, primera_capa)
+	A2 = krn.forward_leaky_relu(W2, b2, A1)
 
 	# Tercera capa
 	
-	tercera_capa = krn.forward_softmax(W3, b3, segunda_capa)
+	A3 = krn.forward_softmax(W3, b3, A2)
 		
 	# Calcular valor
 		
-	prediccion = np.argmax(tercera_capa)
+	prediccion = np.argmax(A3, axis=0)
+	
 	print(prediccion)
 	
-	correcto.append(valor)
-	calculado.append(prediccion)
+	correcto.extend(valores_batch)
+	calculado.extend(prediccion)
 	
 	# Mostrar Imagen
 
@@ -86,10 +91,8 @@ for j in range(num_im):
 correcto = np.array(correcto)
 calculado = np.array(calculado)
 	
-errores = correcto - calculado
+errores = np.sum(correcto != calculado)
 
-errores = [dif for dif in errores if dif != 0]
+porcentaje_error = 100 * errores / num_im
 
-porcentaje = len(errores) / len(correcto)
-
-print(porcentaje*100)	
+print("Porcentaje Error: ", porcentaje_error)	

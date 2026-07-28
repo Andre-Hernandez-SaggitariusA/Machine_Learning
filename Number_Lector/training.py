@@ -12,26 +12,17 @@ rng = np.random.default_rng(seed=1234)
 
 # Leer CSV de entrenamiento
 
-ruta = "training/train_1.csv"
+ruta = "training/train_2.csv"
 
 df = pd.read_csv(ruta)
 
 valores = df["label"].to_numpy()
 
-if ruta == "training/train_1.csv":
+imagenes = df.drop(columns = "label").to_numpy(dtype=np.float64)
 
-	imagenes = df.drop(columns = "label").to_numpy() / 255
-	
-else:
+if imagenes.max() > 1:
 
-	imagenes = df.drop(columns = "label").to_numpy()
-	
-def obtener_imagen(num_fila):
-	
-	imagen = imagenes[num_fila]
-	valor = valores[num_fila]
-	
-	return imagen, valor
+	imagenes /= 255
 
 # Numero de neuronas por capa
 
@@ -46,17 +37,13 @@ lista_fallos = []
 
 # Costo Total Inicial
 
-costo_lista = []
-
-# Valor de aprendizaje
-
-aprendizaje = 0.001
+lista_costos = []
 
 # Cantidad de Pixeles
 
 pixeles = len(imagenes[0])
 
-# Pesos y bias al azar
+# Inicializar Pesos y Bias (Depende de si existe entrenamiento previo o no)
 
 if os.path.exists("valores_entrenamiento.npz"):
 	
@@ -80,11 +67,20 @@ else:
 
 # Definir epocas
 
-epocas = 10
+epocas = 30
 
 # Numero de imagenes
 
 num_im = len(imagenes)
+
+# Definir Mini_Batch
+
+batch_size = 32
+
+# Valor de aprendizaje
+
+aprendizaje_base = 0.001
+aprendizaje = aprendizaje_base * np.sqrt(batch_size)
 
 # Tiempo Inicial
 
@@ -98,44 +94,54 @@ for epoca in range(epocas):
 
 	indices = rng.permutation(num_im)
 
-	for j in indices:
-	
+	for i in range(0, num_im, batch_size):
+		
+		indices_batch = indices[i:i + batch_size]
+		
 		# Obtener matriz
 	
-		imagen, valor = obtener_imagen(j)
+		imagenes_batch = imagenes[indices_batch].T
+		valores_batch = valores[indices_batch]
+		
+		# Tamaño del mini-batch
+		
+		m = imagenes_batch.shape[1]
+		
+		# Matriz Esperada
+		
+		Y = np.zeros((salida, m))
+		Y[valores_batch, np.arange(m)] = 1
+		
+		# Forward Propagation
 		
 		# Primera capa
 	
-		primera_capa = krn.forward_leaky_relu(W1, b1, imagen)
+		A1 = krn.forward_leaky_relu(W1, b1, imagenes_batch)
 
 		# Segunda capa	
 		
-		segunda_capa = krn.forward_leaky_relu(W2, b2, primera_capa)
+		A2 = krn.forward_leaky_relu(W2, b2, A1)
 
 		# Tercera capa
 
-		tercera_capa = krn.forward_softmax(W3, b3, segunda_capa)
+		A3 = krn.forward_softmax(W3, b3, A2)
 	
-		# Calcular costo
-
-		esperado = np.zeros(salida)
-	
-		esperado[valor] = 1.0
-	
-		costo = -np.log(tercera_capa[valor])
-		costo_total += costo
+		# Calcular costo (Cross Entropy)
+				
+		costo_batch = -np.sum(Y * np.log(A3))
+		costo_total += costo_batch
 	
 		# Gradiente tercera capa
 	
-		D3, G3 = krn.back_softmax(tercera_capa, esperado, segunda_capa)
+		D3, G3, B3 = krn.back_softmax(A3, Y, A2)
 	
 		# Gradiente segunda capa
 	
-		D2, G2 = krn.back_leaky_relu(W3, D3, segunda_capa, primera_capa)
+		D2, G2, B2 = krn.back_leaky_relu(W3, D3, A2, A1)
 	
 		# Gradiente tercera capa
 	
-		D1, G1 = krn.back_leaky_relu(W2, D2, primera_capa, imagen)
+		D1, G1, B1 = krn.back_leaky_relu(W2, D2, A1, imagenes_batch)
 			
 		# Mejorar Pesos
 	
@@ -145,23 +151,27 @@ for epoca in range(epocas):
 	
 		# Mejorar Bias
 	
-		b1 -= aprendizaje * D1
-		b2 -= aprendizaje * D2
-		b3 -= aprendizaje * D3
+		b1 -= aprendizaje * B1
+		b2 -= aprendizaje * B2
+		b3 -= aprendizaje * B3
 	
-		if np.argmax(tercera_capa) == valor:
+		# Calcular Predicciones
 		
-			aciertos += 1
-	
-		else:
+		predicciones = np.argmax(A3, axis=0)
 		
-			fallos += 1
+		aciertos_batch = np.sum(predicciones == valores_batch)
+		
+		aciertos += int(aciertos_batch)
+		fallos += int(m - aciertos_batch)
 
-	costo_lista.append(costo_total/num_im)
+	lista_costos.append(costo_total / num_im)
 	lista_aciertos.append(aciertos)
 	lista_fallos.append(fallos)
 	
 	print("Epoca: ", epoca + 1)
+	print("Costo: ", costo_total / num_im)
+	print("Aciertos: ", aciertos)
+	print("Fallos: ", fallos)
 
 # Tiempo Final
 
@@ -169,7 +179,8 @@ tf = time.perf_counter()
 
 print("Tiempo: ", tf-t0)
 	
-plt.plot(costo_lista)
+plt.plot(lista_costos)
+plt.yscale("log")
 plt.grid(True)
 plt.show()
 
