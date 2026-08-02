@@ -22,9 +22,23 @@ def leaky_relu(x, alpha=0.01):
 	
 	return valor
 	
-def der_leaky_relu(x, alpha=0.01):
+def der_leaky_relu(s, alpha=0.01):
 	
-	valor = np.where(x > 0, 1, alpha)
+	valor = np.where(s > 0, 1, alpha)
+	
+	return valor
+
+# Funcion Tanh
+
+def tanh(x):
+	
+	valor = np.tanh(x)
+	
+	return valor
+	
+def der_tanh(s):
+	
+	valor = 1 - s**2
 	
 	return valor
 

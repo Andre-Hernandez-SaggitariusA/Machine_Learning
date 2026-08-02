@@ -75,7 +75,7 @@ num_im = len(imagenes)
 
 # Definir Mini_Batch
 
-batch_size = 32
+batch_size = 1024
 
 # Valor de aprendizaje
 
@@ -87,6 +87,8 @@ aprendizaje = aprendizaje_base * np.sqrt(batch_size)
 t0 = time.perf_counter()
 
 for epoca in range(epocas):
+
+	t0_epoca = time.perf_counter()
 
 	aciertos = 0
 	fallos = 0
@@ -168,10 +170,13 @@ for epoca in range(epocas):
 	lista_aciertos.append(aciertos)
 	lista_fallos.append(fallos)
 	
+	tf_epoca = time.perf_counter()
+	
 	print("Epoca: ", epoca + 1)
 	print("Costo: ", costo_total / num_im)
 	print("Aciertos: ", aciertos)
 	print("Fallos: ", fallos)
+	print("Tiempo Epoca: ", tf_epoca-t0_epoca)
 
 # Tiempo Final
 
