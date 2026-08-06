@@ -23,6 +23,18 @@ def back_sig_mlp(W_posterior, D_posterior, A_current, A_previous):
 	
 	return D_current, G_current, B_current
 
+def back_sig_last(A_current, A_expected, A_previous):
+	
+	batch_size = A_previous.shape[1]
+	
+	D_current = (A_current - A_expected) * der_sig(A_current)
+	
+	G_current = (D_current @ A_previous.T) / batch_size
+	
+	B_current = np.sum(D_current, axis=1, keepdims=True) / batch_size
+	
+	return D_current, G_current, B_current
+	
 def forward_sig_rnn(W_current, U_current, b_current, A_previous, A_past):
 
 	Z_current = (W_current @ A_previous) + (U_current @ A_past) + b_current
