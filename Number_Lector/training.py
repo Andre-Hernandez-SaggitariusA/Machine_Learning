@@ -12,7 +12,7 @@ rng = np.random.default_rng(seed=1234)
 
 # Leer CSV de entrenamiento
 
-ruta = "training/train_2.csv"
+ruta = "train.csv"
 
 df = pd.read_csv(ruta)
 
@@ -67,20 +67,35 @@ else:
 
 # Definir epocas
 
-epocas = 30
+epocas = 1
 
 # Numero de imagenes
 
-num_im = len(imagenes)
+num_im = int(len(imagenes) / 10)
 
 # Definir Mini_Batch
 
-batch_size = 1024
+batch_size = 1
 
 # Valor de aprendizaje
 
 aprendizaje_base = 0.001
 aprendizaje = aprendizaje_base * np.sqrt(batch_size)
+
+# Listas para animacion
+
+W1_list = []
+W2_list = []
+W3_list = []
+
+b1_list = []
+b2_list = []
+b3_list = []
+
+A_list = []
+A1_list = []
+A2_list = []
+A3_list = []
 
 # Tiempo Inicial
 
@@ -118,15 +133,15 @@ for epoca in range(epocas):
 		
 		# Primera capa
 	
-		A1 = krn.forward_leaky_relu(W1, b1, imagenes_batch)
+		A1 = krn.forward_leaky_relu_mlp(W1, b1, imagenes_batch)
 
 		# Segunda capa	
 		
-		A2 = krn.forward_leaky_relu(W2, b2, A1)
+		A2 = krn.forward_leaky_relu_mlp(W2, b2, A1)
 
 		# Tercera capa
 
-		A3 = krn.forward_softmax(W3, b3, A2)
+		A3 = krn.forward_softmax_mlp(W3, b3, A2)
 	
 		# Calcular costo (Cross Entropy)
 				
@@ -135,15 +150,15 @@ for epoca in range(epocas):
 	
 		# Gradiente tercera capa
 	
-		D3, G3 = krn.back_softmax(A3, Y, A2)
+		D3, G3, B3 = krn.back_softmax_mlp(A3, Y, A2)
 	
 		# Gradiente segunda capa
 	
-		D2, G2, B2 = krn.back_leaky_relu(W3, D3, A2, A1)
+		D2, G2, B2 = krn.back_leaky_relu_mlp(W3, D3, A2, A1)
 	
 		# Gradiente tercera capa
 	
-		D1, G1, B1 = krn.back_leaky_relu(W2, D2, A1, imagenes_batch)
+		D1, G1, B1 = krn.back_leaky_relu_mlp(W2, D2, A1, imagenes_batch)
 			
 		# Mejorar Pesos
 	
@@ -165,6 +180,19 @@ for epoca in range(epocas):
 		
 		aciertos += int(aciertos_batch)
 		fallos += int(m - aciertos_batch)
+		
+		# Agregar listas para animacion
+		
+		W1_list.append(W1)
+		W2_list.append(W2)
+		W3_list.append(W3)
+		b1_list.append(b1)
+		b2_list.append(b2)
+		b3_list.append(b3)
+		A_list.append(imagenes_batch)
+		A1_list.append(A1)
+		A2_list.append(A2)
+		A3_list.append(A3)
 
 	lista_costos.append(costo_total / num_im)
 	lista_aciertos.append(aciertos)
@@ -177,7 +205,8 @@ for epoca in range(epocas):
 	print("Aciertos: ", aciertos)
 	print("Fallos: ", fallos)
 	print("Tiempo Epoca: ", tf_epoca-t0_epoca)
-
+	
+	
 # Tiempo Final
 
 tf = time.perf_counter()
